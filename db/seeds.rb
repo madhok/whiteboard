@@ -147,12 +147,12 @@ FactoryGirl.define do
     graduation_year "2012"
     masters_program "SE"
     masters_track "Tech"
-    twiki_name "FirstLast"
-    first_name "First"
-    last_name "Last"
-    human_name "Your Name"
-    email "your.email@sv.cmu.edu"
-    webiso_account "your.name@andrew.cmu.edu"
+    twiki_name "MadhokShivaratre"
+    first_name "Madhok"
+    last_name "Shivaratre"
+    human_name "Madhok Shivaratre"
+    email "madhok.shivaratre@sv.cmu.edu"
+    webiso_account "mshivara@andrew.cmu.edu"
   end
 
 end

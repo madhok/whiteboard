@@ -43,4 +43,29 @@ class PeopleSearchDefault < ActiveRecord::Base
     results.reject{ |t| t.user_id == user.id }
   end
 
+  def self.get_default_key_contacts(current_user)
+    @user = current_user
+    if (current_user.is_admin? || current_user.is_staff?)
+      if !params[:id].blank?
+        @user_override = true
+        @user = User.find_by_param(params[:id])
+      end
+    end
+    results = default_search_results(@user)
+  end
+
+  def self.get_key_contact_results(user)
+    @people = get_default_key_contacts(user)
+    @people.collect { |default_person| Hash[
+        :image_uri => image_path(default_person.user.image_uri),
+        :title => default_person.user.title,
+        :human_name => default_person.user.human_name,
+        :contact_dtls => default_person.user.telephones_hash,
+        :email => default_person.user.email,
+        :path => person_path(default_person.user),
+        # first_name and last_name required for photobook view
+        :first_name => default_person.user.first_name,
+        :last_name => default_person.user.last_name
+    ]}
+  end
 end

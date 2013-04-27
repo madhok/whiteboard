@@ -40,25 +40,19 @@ class PeopleController < ApplicationController
     end
 
     # 2. default/key contacts for that user
-    @people = get_default_key_contacts
+
+
     # pick only the fields required to be shown in the view and return as a Hash
-    @key_contact_results = @people.collect { |default_person| Hash[
-        :image_uri => image_path(default_person.user.image_uri),
-        :title => default_person.user.title,
-        :human_name => default_person.user.human_name,
-        :contact_dtls => default_person.user.telephones_hash,
-        :email => default_person.user.email,
-        :path => person_path(default_person.user),
-        # first_name and last_name required for photobook view
-        :first_name => default_person.user.first_name,
-        :last_name => default_person.user.last_name
-    ]}
+    @key_contact_results = PeopleSearchDefault.get_key_contact_results(current_user)
     @key_contact_results.uniq!
     respond_to do |format|
       format.html { render :html => @key_contact_results }
       format.json { render :json => @key_contact_results }
     end
   end
+
+
+
   def advanced
     index
   end
@@ -75,12 +69,21 @@ class PeopleController < ApplicationController
   # (see js in views/people/index.html.erb for more details.)
   def search
     # call the function that actually finds all releveant search results from database
-    @people = search_db_fields
+
     #
     priority_results = prioritize_search_results
 
     # pick only the fields required to be shown in the view and return as a Hash
-    @people_hash = @people.collect do |person|
+    @people_hash = get_people_view
+
+    respond_to do |format|
+      format.json { render :json =>  @people_hash, :layout => false }
+    end
+  end
+
+  def get_people_view
+    @people = search_db_fields
+    @people.collect do |person|
       # program, the user is enrolled in needs to be constructed to include addtional info like full-time/part-time
       program = ''
       if person.is_student
@@ -105,10 +108,6 @@ class PeopleController < ApplicationController
            :path => person_path(person),
            :priority => priority_results.include?(person.id)
       ]
-    end
-
-    respond_to do |format|
-      format.json { render :json =>  @people_hash, :layout => false }
     end
   end
 
@@ -600,16 +599,7 @@ class PeopleController < ApplicationController
 
   # Private function to get the key_contacts for a logged in user
   # (lovingly called group_box)
-  def get_default_key_contacts
-    @user = current_user
-    if (current_user.is_admin? || current_user.is_staff?)
-      if !params[:id].blank?
-        @user_override = true
-        @user = User.find_by_param(params[:id])
-      end
-    end
-    results = PeopleSearchDefault.default_search_results(@user)
-  end
+
 
   # Private helper function currently used by download_vcf and download_csv
   # to decide whether to return key_contacts or search_results from the search_params
@@ -619,7 +609,7 @@ class PeopleController < ApplicationController
         search_db_fields
     else
         # no specific search issues, return key_contact results
-        @defaults = get_default_key_contacts
+        @defaults = PeopleSearchDefault.get_default_key_contacts(current_user)
         @people = []
         @defaults.each do |default|
             @people << User.find(default.user_id)
