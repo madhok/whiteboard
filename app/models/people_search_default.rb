@@ -68,4 +68,63 @@ class PeopleSearchDefault < ActiveRecord::Base
         :last_name => default_person.user.last_name
     ]}
   end
+
+  def self.callRespond_to(params, user, format)
+    if(user.nil?)
+      flash[:error] = "Person with an id of #{params[:id]} is not in this system."
+      format.html { redirect_to(people_url) }
+      format.xml { render :xml => user.errors, :status => :unprocessable_entity }
+    else
+      format.html # show.html.erb
+      format.xml { render :xml => user }
+      format.json { render :json => user, :layout => false }
+    end
+
+  end
+
+
+  def self.createPerson( params)
+
+    authorize! :create, User
+
+    @person = User.new
+    @person.is_active = true
+    @person.webiso_account = params[:webiso_account]
+    @person.personal_email = params[:personal_email]
+    @person.is_student = params[:is_student]
+    @person.first_name = params[:first_name]
+    @person.last_name = params[:last_name]
+    @person.masters_program = params[:program]
+    @person.expires_at = params[:expires_at]
+    return @person
+  end
+
+  def self.setAttributes(user, params,format)
+    user.attributes = params[:user]
+    user.photo = params[:user][:photo] if can? :upload_photo, User
+    user.expires_at = params[:user][:expires_at] if current_user.is_admin?
+
+    if user.save
+      unless user.is_profile_valid
+        flash[:error] = "Please update your (social handles or biography) and your contact information"
+      end
+      flash[:notice] = 'Person was successfully updated.'
+      format.html { redirect_to(user) }
+      format.xml { head :ok }
+    else
+      format.html { render :action => "edit" }
+      format.xml { render :xml => user.errors, :status => :unprocessable_entity }
+    end
+  end
+
+  def createAndSetPerson(params,current_user)
+    authorize! :create, User
+    @person = User.new(params[:user])
+    @person.updated_by_user_id = current_user.id
+    @person.image_uri = "/images/mascot.jpg"
+    @person.biography = "<p>I was raised by sheepherders on the hills of BoingBoing while they were selling chunky bacon. Because I have a ring, I need help with putting on my clothes. After working hard they promoted me to garbage man. They told me the reason for this new responsibility was show me the money. I looked for a treasure map and tools, but I never did find the fourteen minutes. People's trash clearly isn't multitudinous. I hope to put my real biography here one day.</p>"
+    if @person.is_student
+      @person.user_text = "<h2>About Me</h2><p>I'd like to accomplish the following three goals (professional or personal) by the time I graduate:<ol><li>Goal 1</li><li>Goal 2</li><li>Goal 3</li></ol></p>"
+    end
+  end
 end

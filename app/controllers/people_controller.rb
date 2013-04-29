@@ -132,16 +132,9 @@ class PeopleController < ApplicationController
     @person.revert_to params[:version_id] if params[:version_id]
 
     respond_to do |format|
-      if @person.nil?
-        flash[:error] = "Person with an id of #{params[:id]} is not in this system."
-        format.html { redirect_to(people_url) }
-        format.xml { render :xml => @person.errors, :status => :unprocessable_entity }
-      else
-        format.html # show.html.erb
-        format.xml { render :xml => @person }
-        format.json { render :json => @person, :layout => false }
-      end
+      PeopleSearchDefault.callRespond_to(params, @person,format)
     end
+
   end
 
   # GET /people/twiki/AndrewCarnegie
@@ -178,17 +171,8 @@ class PeopleController < ApplicationController
   # GET /people/new
   # GET /people/new.xml
   def new
-    authorize! :create, User
 
-    @person = User.new
-    @person.is_active = true
-    @person.webiso_account = params[:webiso_account]
-    @person.personal_email = params[:personal_email]
-    @person.is_student = params[:is_student]
-    @person.first_name = params[:first_name]
-    @person.last_name = params[:last_name]
-    @person.masters_program = params[:program]
-    @person.expires_at = params[:expires_at]
+    @person = PeopleSearchDefault.createPerson(params)
 
     if Rails.env.development?
       @domain = GOOGLE_DOMAIN
@@ -221,16 +205,7 @@ class PeopleController < ApplicationController
   # POST /people
   # POST /people.xml
   def create
-    authorize! :create, User
-
-    @person = User.new(params[:user])
-    @person.updated_by_user_id = current_user.id
-    @person.image_uri = "/images/mascot.jpg"
-    @person.biography = "<p>I was raised by sheepherders on the hills of BoingBoing while they were selling chunky bacon. Because I have a ring, I need help with putting on my clothes. After working hard they promoted me to garbage man. They told me the reason for this new responsibility was show me the money. I looked for a treasure map and tools, but I never did find the fourteen minutes. People's trash clearly isn't multitudinous. I hope to put my real biography here one day.</p>"
-    if @person.is_student
-      @person.user_text = "<h2>About Me</h2><p>I'd like to accomplish the following three goals (professional or personal) by the time I graduate:<ol><li>Goal 1</li><li>Goal 2</li><li>Goal 3</li></ol></p>"
-    end
-
+    @person = PeopleSearchDefault.createAndSetPerson(params,current_user)
 
     respond_to do |format|
 
@@ -261,21 +236,7 @@ class PeopleController < ApplicationController
     @strength_themes = StrengthTheme.all
 
     respond_to do |format|
-      @person.attributes = params[:user]
-      @person.photo = params[:user][:photo] if can? :upload_photo, User
-      @person.expires_at = params[:user][:expires_at] if current_user.is_admin?
-
-      if @person.save
-        unless @person.is_profile_valid
-          flash[:error] = "Please update your (social handles or biography) and your contact information"
-        end
-        flash[:notice] = 'Person was successfully updated.'
-        format.html { redirect_to(@person) }
-        format.xml { head :ok }
-      else
-        format.html { render :action => "edit" }
-        format.xml { render :xml => @person.errors, :status => :unprocessable_entity }
-      end
+      PeopleSearchDefault.setAttributes(@person,params,format)
     end
   end
 
